@@ -6,6 +6,7 @@ import es.upm.etsisi.cf4j.recommender.Recommender;
 import sym_derivation.symderivation.SymFunction;
 
 import java.util.HashMap;
+import java.util.Random;
 
 public class EMF extends Recommender {
 
@@ -23,6 +24,9 @@ public class EMF extends Recommender {
 
     public EMF(String func, DataModel dataModel, int numFactors, int numIters, double regularization, double learningRate, boolean verbose) {
         super(dataModel);
+
+        Random rand = new Random(seed);
+
         // create model function
         this.sf = SymFunction.parse(func);
 
@@ -33,15 +37,19 @@ public class EMF extends Recommender {
         this.learningRate = learningRate;
 
         // users factors initialization
-        this.p = new double [datamodel.getNumberOfUsers()][numFactors];
+        this.p = new double[datamodel.getNumberOfUsers()][numFactors];
         for (int u = 0; u < datamodel.getNumberOfUsers(); u++) {
-            this.p[u] = this.random(this.numFactors, 0, 1);
+            for (int k = 0; k < numFactors; k++) {
+                this.p[u][k] = rand.nextDouble();
+            }
         }
 
         // items factors initialization
         this.q = new double [datamodel.getNumberOfItems()][numFactors];
         for (int i = 0; i < datamodel.getNumberOfItems(); i++) {
-            this.q[i] = this.random(this.numFactors, 0, 1);
+            for (int k = 0; k < numFactors; k++) {
+                this.q[i][k] = rand.nextDouble();
+            }
         }
 
         // verbose mode
@@ -74,16 +82,13 @@ public class EMF extends Recommender {
 
                 User user = datamodel.getUser(userIndex);
 
-                int itemIndex = 0;
-
-                for (int i = 0; i < user.getNumberOfRatings(); i++) {
-
-                    while (itemIndex < user.getItemAt(i)) itemIndex++;
+                for (int pos = 0; pos < user.getNumberOfRatings(); pos++) {
+                    int itemIndex = user.getItemAt(pos);
 
                     HashMap <String, Double> params = getParams(p[userIndex], q[itemIndex]);
 
                     double prediction = sf.eval(params);
-                    double error = user.getRatingAt(i) - prediction;
+                    double error = user.getRatingAt(pos) - prediction;
 
                     for (int k = 0; k < this.numFactors; k++) {
                         dp[userIndex][k] += this.learningRate * (error * puSfDiff[k].eval(params) - this.regularization * p[userIndex][k]);
@@ -114,19 +119,9 @@ public class EMF extends Recommender {
     }
 
     @Override
-    public double predict (int userIndex, int itemIndex) {
+    public double predict(int userIndex, int itemIndex) {
         HashMap <String, Double> params = getParams(this.p[userIndex], this.q[itemIndex]);
         return sf.eval(params);
-    }
-
-    private double random (double min, double max) {
-        return Math.random() * (max - min) + min;
-    }
-
-    private double [] random (int size, double min, double max) {
-        double [] d = new double [size];
-        for (int i = 0; i < size; i++) d[i] = this.random(min, max);
-        return d;
     }
 
     private HashMap<String, Double> getParams (double [] pu, double [] qi) {
