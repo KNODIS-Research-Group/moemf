@@ -3,6 +3,9 @@ package main.java.experiments;
 import es.upm.etsisi.cf4j.data.DataModel;
 import es.upm.etsisi.cf4j.data.DataSet;
 import es.upm.etsisi.cf4j.data.RandomSplitDataSet;
+import es.upm.etsisi.cf4j.qualityMeasure.QualityMeasure;
+import es.upm.etsisi.cf4j.qualityMeasure.prediction.MAE;
+import es.upm.etsisi.cf4j.recommender.Recommender;
 import io.jenetics.*;
 import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;
@@ -14,8 +17,7 @@ import io.jenetics.prog.op.Const;
 import io.jenetics.prog.op.Op;
 import io.jenetics.prog.op.Var;
 import io.jenetics.util.ISeq;
-import main.java.mf.Emf;
-import main.java.qualityMeasures.QualityMeasures;
+import main.java.mf.EMF;
 import org.apache.commons.cli.*;
 
 import java.io.File;
@@ -29,7 +31,7 @@ import java.util.stream.Collectors;
 
 public class GeneticProgramingOptimization {
 
-	private static final String BINARY_FILE = "datasets/ml100k.cf4j";
+	private static final String BINARY_FILE = "datasets/ml100k.dat";
 
 	private static int NUM_TOPICS = 6;
 	private static double REGULARIZATION = 0.055;
@@ -70,7 +72,7 @@ public class GeneticProgramingOptimization {
 	private final static Const<Double> zero = Const.of("Zero", 0.0);
 	private final static Const<Double> one = Const.of("One", 1.0);
 	private static PrintWriter output;
-
+	private static DataModel model;
 
 	public static void main (String [] args) {
 		CommandLineParser parser = new DefaultParser();
@@ -184,8 +186,8 @@ public class GeneticProgramingOptimization {
 			System.out.println( "Unexpected exception:" + e.getMessage() );
 		}
 
-        DataSet ml100k = new RandomSplitDataSet(BINARY_FILE, 0.2f, 0.2f);
-        DataModel model = new DataModel(ml100k);
+        DataSet ml100k = new RandomSplitDataSet(BINARY_FILE, 0.2f, 0.2f, "::");
+        model = new DataModel(ml100k);
 
 		final ISeq<Op<Double>> operations = ISeq.of(sin, cos, atan, exp, log, inv, sign, add, sub, times, pow);
 
@@ -256,9 +258,9 @@ public class GeneticProgramingOptimization {
 				.replace(")"," ")
 				.replace(",", " ");
 
-		Emf emf = new Emf(func, NUM_TOPICS, NUM_ITERS, REGULARIZATION, LEARNING_RATE);
-
-		double error = QualityMeasures.MAE(emf);
+		Recommender emf = new EMF(func, model, NUM_TOPICS, NUM_ITERS, REGULARIZATION, LEARNING_RATE, false);
+		QualityMeasure mae = new MAE(emf);
+		double error = mae.getScore();
 
 		return Double.isNaN(error) ? 4.0 : error;
 	}

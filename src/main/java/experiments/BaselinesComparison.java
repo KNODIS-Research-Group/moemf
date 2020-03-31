@@ -1,26 +1,24 @@
 package main.java.experiments;
 
-import cf4j.Kernel;
-import cf4j.Processor;
-import cf4j.model.matrixFactorization.Bmf;
-import cf4j.model.matrixFactorization.FactorizationModel;
-import cf4j.model.matrixFactorization.Pmf;
-import cf4j.model.predictions.FactorizationPrediction;
-import cf4j.utils.Range;
+import es.upm.etsisi.cf4j.data.DataModel;
+import es.upm.etsisi.cf4j.data.DataSet;
+import es.upm.etsisi.cf4j.data.RandomSplitDataSet;
+import es.upm.etsisi.cf4j.qualityMeasure.QualityMeasure;
+import es.upm.etsisi.cf4j.qualityMeasure.prediction.MAE;
+import es.upm.etsisi.cf4j.qualityMeasure.prediction.MSE;
 import es.upm.etsisi.cf4j.recommender.Recommender;
 import es.upm.etsisi.cf4j.recommender.matrixFactorization.BNMF;
 import es.upm.etsisi.cf4j.recommender.matrixFactorization.BiasedMF;
 import es.upm.etsisi.cf4j.recommender.matrixFactorization.NMF;
 import es.upm.etsisi.cf4j.recommender.matrixFactorization.PMF;
-import main.java.mf.Emf;
-import main.java.mf.Nmf;
-import main.java.qualityMeasures.QualityMeasures;
+import main.java.mf.EMF;
 
 public class BaselinesComparison {
 
+    private static long SEED = 1337;
     private static int NUM_ITERS = 100;
 
-    private static final String BINARY_FILE = "datasets/ml100k.cf4j";
+    private static final String BINARY_FILE = "datasets/ml100k.dat";
 
     private static int PMF_NUM_TOPICS = 6;
     private static double PMF_LAMBDA = 0.085;
@@ -103,12 +101,13 @@ public class BaselinesComparison {
 
         // define quality measures
 
-        double [] mae = new double [series.length];
-        double [] mse = new double [series.length];
+        double [] mae_vector = new double [series.length];
+        double [] mse_vector = new double [series.length];
 
         // load dataset
 
-        Kernel.getInstance().readKernel(BINARY_FILE);
+        DataSet ml100k = new RandomSplitDataSet(BINARY_FILE, 0.2f, 0.2f, "::", SEED);
+        DataModel dataModel = new DataModel(ml100k);
 
 
         // test series
@@ -118,36 +117,44 @@ public class BaselinesComparison {
 
             Recommender fm;
 
-            if (serie.equals("PMF")) {
-                fm = new PMF(PMF_NUM_TOPICS, NUM_ITERS, PMF_LAMBDA, PMF_GAMMA, false);
 
-            } else if (serie.equals("BiasedMF")) {
-                fm = new BiasedMF(BIASED_MF_NUM_TOPICS, NUM_ITERS, BIASED_MF_LAMBDA, BIASED_MF_GAMMA, true);
+            switch (serie) {
+                case "PMF":
+                    fm = new PMF(dataModel, PMF_NUM_TOPICS, NUM_ITERS, PMF_LAMBDA, PMF_GAMMA, SEED);
 
-            } else if (serie.equals("NMF")) {
-                fm = new NMF(NMF_NUM_TOPICS, NUM_ITERS);
+                    break;
+                case "BiasedMF":
+                    fm = new BiasedMF(dataModel, BIASED_MF_NUM_TOPICS, NUM_ITERS, BIASED_MF_LAMBDA, BIASED_MF_GAMMA, SEED);
 
-            } else if (serie.equals("BNMF")) {
-                fm = new BNMF(BNMF_NUM_TOPICS, NUM_ITERS, BNMF_ALPHA, BNMF_BETA);
+                    break;
+                case "NMF":
+                    fm = new NMF(dataModel, NMF_NUM_TOPICS, NUM_ITERS, SEED);
 
-            } else { // serie.equals("EMF_<id>")
-                int index = Integer.parseInt(serie.split("_")[1]) - 1;
-                String func = EMF_FUNCS[index];
-                fm = new EMF(func, EMF_NUM_TOPICS, NUM_ITERS, EMF_REGULARIZARION, EMF_LEARNING_RATE);
+                    break;
+                case "BNMF":
+                    fm = new BNMF(dataModel, BNMF_NUM_TOPICS, NUM_ITERS, BNMF_ALPHA, BNMF_BETA, SEED);
+
+                    break;
+                default:  // serie.equals("EMF_<id>")
+                    int index = Integer.parseInt(serie.split("_")[1]) - 1;
+                    String func = EMF_FUNCS[index];
+                    fm = new EMF(func, dataModel, EMF_NUM_TOPICS, NUM_ITERS, EMF_REGULARIZARION, EMF_LEARNING_RATE, true);
+                    break;
             }
 
-            fm.train();
-            Processor.getInstance().testUsersProcess(new FactorizationPrediction(fm));
+            fm.fit();
+            QualityMeasure mae = new MAE(fm);
+            QualityMeasure mse = new MSE(fm);
 
-            mae[s] = QualityMeasures.MAE(fm);
-            mse[s] = QualityMeasures.MSE(fm);
+            mae_vector[s] = mae.getScore();
+            mse_vector[s] = mse.getScore();
 
 
             // print results
 
             System.out.println("\nMethod;MAE;MSE");
             for (int i = 0; i < series.length; i++) {
-                System.out.println(series[i] + ";" + mae[i] + ";" + mse[i]);
+                System.out.println(series[i] + ";" + mae_vector[i] + ";" + mse_vector[i]);
             }
         }
     }
