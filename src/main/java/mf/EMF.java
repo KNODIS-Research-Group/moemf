@@ -22,7 +22,7 @@ public class EMF extends Recommender {
 
     private boolean verbose;
 
-    public EMF(String func, DataModel dataModel, int numFactors, int numIters, double regularization, double learningRate, boolean verbose) {
+    public EMF(String func, DataModel dataModel, int numFactors, int numIters, double regularization, double learningRate, long seed, boolean verbose) {
         super(dataModel);
 
         Random rand = new Random(seed);

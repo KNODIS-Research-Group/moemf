@@ -138,7 +138,7 @@ public class BaselinesComparison {
                 default:  // serie.equals("EMF_<id>")
                     int index = Integer.parseInt(serie.split("_")[1]) - 1;
                     String func = EMF_FUNCS[index];
-                    fm = new EMF(func, dataModel, EMF_NUM_TOPICS, NUM_ITERS, EMF_REGULARIZARION, EMF_LEARNING_RATE, true);
+                    fm = new EMF(func, dataModel, EMF_NUM_TOPICS, NUM_ITERS, EMF_REGULARIZARION, EMF_LEARNING_RATE, SEED,true);
                     break;
             }
 

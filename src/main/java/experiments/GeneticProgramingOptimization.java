@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 public class GeneticProgramingOptimization {
 
 	private static final String BINARY_FILE = "datasets/ml100k.dat";
+	private static final long SEED = 1337;
 
 	private static int NUM_TOPICS = 6;
 	private static double REGULARIZATION = 0.055;
@@ -258,7 +259,7 @@ public class GeneticProgramingOptimization {
 				.replace(")"," ")
 				.replace(",", " ");
 
-		Recommender emf = new EMF(func, model, NUM_TOPICS, NUM_ITERS, REGULARIZATION, LEARNING_RATE, false);
+		Recommender emf = new EMF(func, model, NUM_TOPICS, NUM_ITERS, REGULARIZATION, LEARNING_RATE, SEED,false);
 		QualityMeasure mae = new MAE(emf);
 		double error = mae.getScore();
 
