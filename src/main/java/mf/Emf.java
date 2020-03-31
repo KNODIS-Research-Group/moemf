@@ -1,13 +1,12 @@
 package main.java.mf;
 
-import cf4j.*;
-import cf4j.model.matrixFactorization.FactorizationModel;
 import es.upm.etsisi.cf4j.data.DataModel;
 import es.upm.etsisi.cf4j.data.User;
 import es.upm.etsisi.cf4j.recommender.Recommender;
 import sym_derivation.symderivation.SymFunction;
 
 import java.util.HashMap;
+import java.util.Random;
 
 public class Emf extends Recommender {
 
@@ -21,8 +20,11 @@ public class Emf extends Recommender {
     private double [][] p;
     private double [][] q;
 
-    public Emf (String func, DataModel dataModel, int numFactors, int numIters, double regularization, double learningRate) {
+    public Emf (String func, DataModel dataModel, int numFactors, int numIters, double regularization, double learningRate, long seed) {
         super(dataModel);
+
+        Random rand = new Random(seed);
+
         // create model function
         this.sf = SymFunction.parse(func);
 
@@ -33,21 +35,26 @@ public class Emf extends Recommender {
         this.learningRate = learningRate;
 
         // users factors initialization
-        this.p = new double [datamodel.getNumberOfUsers()][numFactors];
+        this.p = new double[datamodel.getNumberOfUsers()][numFactors];
         for (int u = 0; u < datamodel.getNumberOfUsers(); u++) {
-            this.p[u] = this.random(this.numFactors, 0, 1);
+            for (int k = 0; k < numFactors; k++) {
+                this.p[u][k] = rand.nextDouble();
+            }
         }
 
-        // items factors initialization
-        this.q = new double [datamodel.getNumberOfItems()][numFactors];
+        // users factors initialization
+        this.q = new double[datamodel.getNumberOfItems()][numFactors];
         for (int i = 0; i < datamodel.getNumberOfItems(); i++) {
-            this.q[i] = this.random(this.numFactors, 0, 1);
+            for (int k = 0; k < numFactors; k++) {
+                this.q[i][k] = rand.nextDouble();
+            }
         }
     }
 
-    public void train () {
+    @Override
+    public void fit() {
 
-        System.out.println("\nProcessing EMF...");
+        System.out.println("\nFitting EMF...");
 
         // partial derivatives of the model function
 
@@ -70,16 +77,13 @@ public class Emf extends Recommender {
 
                 User user = datamodel.getUser(userIndex);
 
-                int itemIndex = 0;
-
-                for (int i = 0; i < user.getNumberOfRatings(); i++) {
-
-                    while (datamodel.getItem(itemIndex).getItemIndex() < user.getItemAt(i)) itemIndex++;
+                for (int pos = 0; pos < user.getNumberOfRatings(); pos++) {
+                    int itemIndex = user.getItemAt(pos);
 
                     HashMap <String, Double> params = getParams(p[userIndex], q[itemIndex]);
 
                     double prediction = sf.eval(params);
-                    double error = user.getRatingAt(i) - prediction;
+                    double error = user.getRatingAt(pos) - prediction;
 
                     for (int k = 0; k < this.numFactors; k++) {
                         dp[userIndex][k] += this.learningRate * (error * puSfDiff[k].eval(params) - this.regularization * p[userIndex][k]);
@@ -89,14 +93,14 @@ public class Emf extends Recommender {
             }
 
             // update users factors
-            for (int userIndex = 0; userIndex < Kernel.getInstance().getNumberOfUsers(); userIndex++) {
+            for (int userIndex = 0; userIndex < datamodel.getNumberOfUsers(); userIndex++) {
                 for (int k = 0; k < this.numFactors; k++) {
                     p[userIndex][k] += dp[userIndex][k];
                 }
             }
 
             // update items factors
-            for (int itemIndex = 0; itemIndex < Kernel.getInstance().getNumberOfItems(); itemIndex++) {
+            for (int itemIndex = 0; itemIndex < datamodel.getNumberOfItems(); itemIndex++) {
                 for (int k = 0; k < this.numFactors; k++) {
                     q[itemIndex][k] += dq[itemIndex][k];
                 }
@@ -107,19 +111,10 @@ public class Emf extends Recommender {
         }
     }
 
-    public double getPrediction (int userIndex, int itemIndex) {
+    @Override
+    public double predict(int userIndex, int itemIndex) {
         HashMap <String, Double> params = getParams(this.p[userIndex], this.q[itemIndex]);
         return sf.eval(params);
-    }
-
-    private double random (double min, double max) {
-        return Math.random() * (max - min) + min;
-    }
-
-    private double [] random (int size, double min, double max) {
-        double [] d = new double [size];
-        for (int i = 0; i < size; i++) d[i] = this.random(min, max);
-        return d;
     }
 
     private HashMap<String, Double> getParams (double [] pu, double [] qi) {
@@ -129,15 +124,5 @@ public class Emf extends Recommender {
             map.put("qi" + k, qi[k]);
         }
         return map;
-    }
-
-    @Override
-    public void fit() {
-
-    }
-
-    @Override
-    public double predict(int i, int i1) {
-        return 0;
     }
 }
