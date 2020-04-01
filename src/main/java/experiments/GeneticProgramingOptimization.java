@@ -11,9 +11,11 @@ import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.ext.SingleNodeCrossover;
+import io.jenetics.ext.rewriting.TreeRewriteRule;
+import io.jenetics.ext.rewriting.TreeRewriter;
+import io.jenetics.prog.MathRewriteAlterer;
 import io.jenetics.prog.ProgramChromosome;
 import io.jenetics.prog.ProgramGene;
-import io.jenetics.prog.op.Const;
 import io.jenetics.prog.op.Op;
 import io.jenetics.prog.op.Var;
 import io.jenetics.util.ISeq;
@@ -27,6 +29,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 public class GeneticProgramingOptimization {
@@ -54,26 +57,33 @@ public class GeneticProgramingOptimization {
 
 	private static int NUM_ITERS = 100;
 
-
-	// Jenetics operations
-	private final static Op<Double> sin = Op.of("sin", 1, v -> Math.sin(v[0]));
-	private final static Op<Double> cos = Op.of("cos", 1, v -> Math.cos(v[0]));
-	private final static Op<Double> atan = Op.of("atan", 1, v -> Math.atan(v[0]));
-	private final static Op<Double> exp = Op.of("exp", 1, v -> Math.exp(v[0]));
-	private final static Op<Double> log = Op.of("log", 1, v -> Math.log(v[0]));
-	private final static Op<Double> inv = Op.of("inv", 1, v -> 1.0 / v[0]);
-	private final static Op<Double> sign = Op.of("--", 1, v -> -v[0]);
-	private final static Op<Double> add = Op.of("+", 2, v -> v[0] + v[1]);
-	private final static Op<Double> sub = Op.of("-", 2, v -> v[0] - v[1]);
-	private final static Op<Double> times = Op.of("*", 2, v -> v[0] * v[1]);
-	private final static Op<Double> pow = Op.of("pow", 2, v -> Math.pow(v[0], v[1]));
-
-
-	// Jenetics terminals
-	private final static Const<Double> zero = Const.of("Zero", 0.0);
-	private final static Const<Double> one = Const.of("One", 1.0);
 	private static PrintWriter output;
 	private static DataModel model;
+
+	// Tree rewriting system
+    private final static TreeRewriter<Op<Double>> trs = TreeRewriter.concat(
+            compile("+($x,Zero) -> $x"),
+            compile("+(Zero,$x) -> $x"),
+            compile("-($x,Zero) -> $x"),
+            compile("-(Zero,$x) -> --($x)"),
+            compile("*(Zero,$x) -> Zero"),
+            compile("*($x,Zero) -> Zero"),
+            compile("*($x,One) -> $x"),
+            compile("*(One,$x) -> $x"),
+            compile("--(Zero) -> Zero"),
+            compile("pow($x,Zero) -> One"),
+            compile("pow($x,One) -> $x"),
+            compile("pow(Zero,$x) -> Zero"),
+            compile("pow(One,$x) -> One"),
+            compile("inv(One) -> One"),
+            compile("log(One) -> Zero"),
+            compile("exp(Zero) -> One"),
+            compile("log(exp($x)) -> $x")
+    );
+
+    private static TreeRewriter<Op<Double>> compile(final String rule) {
+        return TreeRewriteRule.parse(rule, CustomMathOp::toMathOp);
+    }
 
 	public static void main (String [] args) {
 		CommandLineParser parser = new DefaultParser();
@@ -190,7 +200,19 @@ public class GeneticProgramingOptimization {
         DataSet ml100k = new RandomSplitDataSet(BINARY_FILE, 0.2f, 0.2f, "::");
         model = new DataModel(ml100k);
 
-		final ISeq<Op<Double>> operations = ISeq.of(sin, cos, atan, exp, log, inv, sign, add, sub, times, pow);
+        final ISeq<Op<Double>> operations = ISeq.of(
+                CustomMathOp.SIN,
+                CustomMathOp.COS,
+                CustomMathOp.ATAN,
+                CustomMathOp.EXP,
+                CustomMathOp.LOG,
+                CustomMathOp.INV,
+                CustomMathOp.NEG,
+                CustomMathOp.ADD,
+                CustomMathOp.SUB,
+                CustomMathOp.MUL,
+                CustomMathOp.POW
+        );
 
 		ISeq<Op<Double>> inputs = ISeq.empty();
 		// Terminal nodes: variables
@@ -200,16 +222,16 @@ public class GeneticProgramingOptimization {
 					Var.of("qi"+i, i + NUM_TOPICS)
 			);
 		}
-		inputs = inputs.append(zero, one);
+		inputs = inputs.append(CustomMathOp.Zero, CustomMathOp.One);
 
 		// Tree building
 		final Codec<ProgramGene<Double>, ProgramGene<Double>> codec = Codec.of(
 				Genotype.of(ProgramChromosome.of(
 						6,
-						ch -> ch.getRoot().size() <= 150,
+						ch -> ch.root().size() <= 150,
 						operations,
 						inputs
-				)), Genotype::getGene
+				)), Genotype::gene
 		);
 
 		final Engine<ProgramGene<Double>, Double> engine = Engine
@@ -218,9 +240,11 @@ public class GeneticProgramingOptimization {
 				.offspringSelector(new TournamentSelector<>())
 				.alterers(
 						new SingleNodeCrossover<>(PBX),
-						new Mutator<>(PBMUT))
+						new Mutator<>(PBMUT),
+                        new MathRewriteAlterer<>(trs,1))
 				.survivorsSelector(new EliteSelector<ProgramGene<Double>, Double>(2, new MonteCarloSelector<>()))
 				.populationSize(POP_SIZE)
+                .executor((Executor)Runnable::run)
 				.build();
 
 		// Output file with unique filename
@@ -250,7 +274,7 @@ public class GeneticProgramingOptimization {
 
 		output.close();
 
-		System.out.println(population.getBestPhenotype().getGenotype().getGene().toParenthesesString());
+		System.out.println(population.bestPhenotype().genotype().gene().toParenthesesString());
 	}
 
 	private static double fitness(final ProgramGene<Double> program) {
@@ -261,32 +285,32 @@ public class GeneticProgramingOptimization {
 
 		Recommender emf = new EMF(func, model, NUM_TOPICS, NUM_ITERS, REGULARIZATION, LEARNING_RATE, SEED,false);
 		QualityMeasure mae = new MAE(emf);
-		double error = mae.getScore();
+		double error = mae.getScore(1);
 
-		return Double.isNaN(error) ? 4.0 : error;
+		return (Double.isNaN(error) || Double.isInfinite(error)) ? 10.0 : error;
 	}
 
 	private static void update(final EvolutionResult<ProgramGene<Double>, Double> result) {
 		String info = String.format(
 				"%d/%d:\tbest=%.4f\tinvalids=%d\tavg=%.4f\tbest=%s",
-				result.getGeneration(),
+                result.generation(),
 				GENS,
-				result.getBestFitness(),
-				result.getInvalidCount(),
-				result.getPopulation().stream().collect(Collectors.averagingDouble(Phenotype::getFitness)),
-				result.getBestPhenotype().getGenotype().getGene().toParenthesesString());
+                result.bestFitness(),
+                result.invalidCount(),
+				result.population().stream().collect(Collectors.averagingDouble(Phenotype::fitness)),
+				result.bestPhenotype().genotype().gene().toParenthesesString());
 		System.out.println(info);
 	}
 
 	private static void toFile(final EvolutionResult<ProgramGene<Double>, Double> result) {
-		double[] fitnesses = result.getPopulation().stream().mapToDouble(Phenotype::getFitness).toArray();
+		double[] fitnesses = result.population().stream().mapToDouble(Phenotype::fitness).toArray();
 		List<CharSequence> fs = new ArrayList<>();
 
 		for (double fitness : fitnesses) {
 			fs.add(String.valueOf(fitness));
 		}
 
-		output.println(result.getGeneration() + "," + String.join(",", fs));
+		output.println(result.generation() + "," + String.join(",", fs));
 
 	}
 }

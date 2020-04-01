@@ -30,6 +30,10 @@ public class EMF extends Recommender {
         // create model function
         this.sf = SymFunction.parse(func);
 
+        if (sf==null) {
+            System.out.println("Funcion mala! " + func);
+        }
+
         // model hyper-parameters
         this.numFactors = numFactors;
         this.numIters = numIters;
