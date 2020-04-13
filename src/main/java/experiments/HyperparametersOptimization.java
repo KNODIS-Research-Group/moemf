@@ -1,16 +1,18 @@
-package main.java.experiments;
+package experiments;
 
-import es.upm.etsisi.cf4j.data.DataModel;
-import es.upm.etsisi.cf4j.data.DataSet;
-import es.upm.etsisi.cf4j.data.RandomSplitDataSet;
-import es.upm.etsisi.cf4j.qualityMeasure.QualityMeasure;
-import es.upm.etsisi.cf4j.qualityMeasure.prediction.MAE;
-import es.upm.etsisi.cf4j.recommender.Recommender;
-import es.upm.etsisi.cf4j.recommender.matrixFactorization.BNMF;
-import es.upm.etsisi.cf4j.recommender.matrixFactorization.BiasedMF;
-import es.upm.etsisi.cf4j.recommender.matrixFactorization.NMF;
-import es.upm.etsisi.cf4j.recommender.matrixFactorization.PMF;
-import es.upm.etsisi.cf4j.util.Range;
+import com.github.ferortega.cf4j.data.DataModel;
+import com.github.ferortega.cf4j.data.DataSet;
+import com.github.ferortega.cf4j.data.RandomSplitDataSet;
+import com.github.ferortega.cf4j.qualityMeasure.QualityMeasure;
+import com.github.ferortega.cf4j.qualityMeasure.prediction.MAE;
+import com.github.ferortega.cf4j.recommender.Recommender;
+import com.github.ferortega.cf4j.recommender.matrixFactorization.BNMF;
+import com.github.ferortega.cf4j.recommender.matrixFactorization.BiasedMF;
+import com.github.ferortega.cf4j.recommender.matrixFactorization.NMF;
+import com.github.ferortega.cf4j.recommender.matrixFactorization.PMF;
+import com.github.ferortega.cf4j.util.Range;
+
+import java.io.IOException;
 
 public class HyperparametersOptimization {
 
@@ -22,7 +24,14 @@ public class HyperparametersOptimization {
 
 
     public static void main(String[] args) {
-        DataSet ml100k = new RandomSplitDataSet(BINARY_FILE, 0.2, 0.2, "::", SEED);
+        DataSet ml100k = null;
+        try {
+            ml100k = new RandomSplitDataSet(BINARY_FILE, 0.2, 0.2, "::", SEED);
+        } catch (IOException e) {
+            System.out.println("There was an error when loading file " + BINARY_FILE);
+            e.printStackTrace();
+            System.exit(-1);
+        }
         DataModel dataModel = new DataModel(ml100k);
 
 

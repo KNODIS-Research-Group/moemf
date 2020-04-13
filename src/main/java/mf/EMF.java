@@ -1,8 +1,8 @@
-package main.java.mf;
+package mf;
 
-import es.upm.etsisi.cf4j.data.DataModel;
-import es.upm.etsisi.cf4j.data.User;
-import es.upm.etsisi.cf4j.recommender.Recommender;
+import com.github.ferortega.cf4j.data.DataModel;
+import com.github.ferortega.cf4j.data.User;
+import com.github.ferortega.cf4j.recommender.Recommender;
 import sym_derivation.symderivation.SymFunction;
 
 import java.util.HashMap;

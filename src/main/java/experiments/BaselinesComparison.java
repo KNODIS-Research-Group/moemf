@@ -1,17 +1,19 @@
-package main.java.experiments;
+package experiments;
 
-import es.upm.etsisi.cf4j.data.DataModel;
-import es.upm.etsisi.cf4j.data.DataSet;
-import es.upm.etsisi.cf4j.data.RandomSplitDataSet;
-import es.upm.etsisi.cf4j.qualityMeasure.QualityMeasure;
-import es.upm.etsisi.cf4j.qualityMeasure.prediction.MAE;
-import es.upm.etsisi.cf4j.qualityMeasure.prediction.MSE;
-import es.upm.etsisi.cf4j.recommender.Recommender;
-import es.upm.etsisi.cf4j.recommender.matrixFactorization.BNMF;
-import es.upm.etsisi.cf4j.recommender.matrixFactorization.BiasedMF;
-import es.upm.etsisi.cf4j.recommender.matrixFactorization.NMF;
-import es.upm.etsisi.cf4j.recommender.matrixFactorization.PMF;
-import main.java.mf.EMF;
+import com.github.ferortega.cf4j.data.DataModel;
+import com.github.ferortega.cf4j.data.DataSet;
+import com.github.ferortega.cf4j.data.RandomSplitDataSet;
+import com.github.ferortega.cf4j.qualityMeasure.QualityMeasure;
+import com.github.ferortega.cf4j.qualityMeasure.prediction.MAE;
+import com.github.ferortega.cf4j.qualityMeasure.prediction.MSE;
+import com.github.ferortega.cf4j.recommender.Recommender;
+import com.github.ferortega.cf4j.recommender.matrixFactorization.BNMF;
+import com.github.ferortega.cf4j.recommender.matrixFactorization.BiasedMF;
+import com.github.ferortega.cf4j.recommender.matrixFactorization.NMF;
+import com.github.ferortega.cf4j.recommender.matrixFactorization.PMF;
+import mf.EMF;
+
+import java.io.IOException;
 
 public class BaselinesComparison {
 
@@ -106,7 +108,14 @@ public class BaselinesComparison {
 
         // load dataset
 
-        DataSet ml100k = new RandomSplitDataSet(BINARY_FILE, 0.2f, 0.2f, "::", SEED);
+        DataSet ml100k = null;
+        try {
+            ml100k = new RandomSplitDataSet(BINARY_FILE, 0.2f, 0.2f, "::", SEED);
+        } catch (IOException e) {
+            System.out.println("There was an error when loading file " + BINARY_FILE);
+            e.printStackTrace();
+            System.exit(-1);
+        }
         DataModel dataModel = new DataModel(ml100k);
 
 

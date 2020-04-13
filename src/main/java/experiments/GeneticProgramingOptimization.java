@@ -1,11 +1,11 @@
-package main.java.experiments;
+package experiments;
 
-import es.upm.etsisi.cf4j.data.DataModel;
-import es.upm.etsisi.cf4j.data.DataSet;
-import es.upm.etsisi.cf4j.data.RandomSplitDataSet;
-import es.upm.etsisi.cf4j.qualityMeasure.QualityMeasure;
-import es.upm.etsisi.cf4j.qualityMeasure.prediction.MAE;
-import es.upm.etsisi.cf4j.recommender.Recommender;
+import com.github.ferortega.cf4j.data.DataModel;
+import com.github.ferortega.cf4j.data.DataSet;
+import com.github.ferortega.cf4j.data.RandomSplitDataSet;
+import com.github.ferortega.cf4j.qualityMeasure.QualityMeasure;
+import com.github.ferortega.cf4j.qualityMeasure.prediction.MAE;
+import com.github.ferortega.cf4j.recommender.Recommender;
 import io.jenetics.*;
 import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;
@@ -19,7 +19,7 @@ import io.jenetics.prog.ProgramGene;
 import io.jenetics.prog.op.Op;
 import io.jenetics.prog.op.Var;
 import io.jenetics.util.ISeq;
-import main.java.mf.EMF;
+import mf.EMF;
 import org.apache.commons.cli.*;
 
 import java.io.File;
@@ -197,7 +197,14 @@ public class GeneticProgramingOptimization {
 			System.out.println( "Unexpected exception:" + e.getMessage() );
 		}
 
-        DataSet ml100k = new RandomSplitDataSet(BINARY_FILE, 0.2f, 0.2f, "::");
+        DataSet ml100k = null;
+        try {
+            ml100k = new RandomSplitDataSet(BINARY_FILE, 0.2f, 0.2f, "::");
+        } catch (IOException e) {
+            System.out.println("There was an error when loading file " + BINARY_FILE);
+            e.printStackTrace();
+            System.exit(-1);
+        }
         model = new DataModel(ml100k);
 
         final ISeq<Op<Double>> operations = ISeq.of(

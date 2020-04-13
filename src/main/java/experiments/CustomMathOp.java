@@ -1,4 +1,4 @@
-package main.java.experiments;
+package experiments;
 
 import io.jenetics.prog.op.Const;
 import io.jenetics.prog.op.Op;
