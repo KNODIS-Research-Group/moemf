@@ -281,7 +281,14 @@ public class GeneticProgramingOptimization {
 
 		output.close();
 
-		System.out.println(population.bestPhenotype().genotype().gene().toParenthesesString());
+		System.out.println(
+		        population
+                .bestPhenotype()
+                .genotype()
+                .gene()
+                .toParenthesesString()
+                .replace("(", " ")
+                .replace(")", " "));
 	}
 
 	private static double fitness(final ProgramGene<Double> program) {
@@ -291,6 +298,7 @@ public class GeneticProgramingOptimization {
 				.replace(",", " ");
 
 		Recommender emf = new EMF(func, model, NUM_TOPICS, NUM_ITERS, REGULARIZATION, LEARNING_RATE, SEED,false);
+		emf.fit();
 		QualityMeasure mae = new MAE(emf);
 		double error = mae.getScore(1);
 
