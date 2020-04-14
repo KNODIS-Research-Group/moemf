@@ -5,12 +5,18 @@ import com.github.ferortega.cf4j.data.DataSet;
 import com.github.ferortega.cf4j.data.RandomSplitDataSet;
 import com.github.ferortega.cf4j.qualityMeasure.QualityMeasure;
 import com.github.ferortega.cf4j.qualityMeasure.prediction.MAE;
+import com.github.ferortega.cf4j.qualityMeasure.recommendation.Diversity;
+import com.github.ferortega.cf4j.qualityMeasure.recommendation.Novelty;
 import com.github.ferortega.cf4j.recommender.Recommender;
 import io.jenetics.*;
 import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.ext.SingleNodeCrossover;
+import io.jenetics.ext.moea.MOEA;
+import io.jenetics.ext.moea.NSGA2Selector;
+import io.jenetics.ext.moea.Vec;
+import io.jenetics.ext.moea.VecFactory;
 import io.jenetics.ext.rewriting.TreeRewriteRule;
 import io.jenetics.ext.rewriting.TreeRewriter;
 import io.jenetics.prog.MathRewriteAlterer;
@@ -19,6 +25,8 @@ import io.jenetics.prog.ProgramGene;
 import io.jenetics.prog.op.Op;
 import io.jenetics.prog.op.Var;
 import io.jenetics.util.ISeq;
+import io.jenetics.util.IntRange;
+import io.jenetics.util.RandomRegistry;
 import mf.EMF;
 import org.apache.commons.cli.*;
 
@@ -26,9 +34,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+import java.util.Random;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
@@ -36,8 +43,9 @@ public class GeneticProgramingOptimization {
 
 	private static final String BINARY_FILE = "datasets/ml100k.dat";
 	private static final long SEED = 1337;
+    private static final int NUM_RECS = 10;
 
-	private static int NUM_TOPICS = 6;
+    private static int NUM_TOPICS = 6;
 	private static double REGULARIZATION = 0.055;
 	private static double LEARNING_RATE = 0.0001;
 	private static int GENS = 150;
@@ -84,6 +92,13 @@ public class GeneticProgramingOptimization {
     private static TreeRewriter<Op<Double>> compile(final String rule) {
         return TreeRewriteRule.parse(rule, CustomMathOp::toMathOp);
     }
+
+    // Multi-objective optimization
+    final static VecFactory<double[]> fitfactory = VecFactory.ofDoubleVec(
+            Optimize.MINIMUM,   // MAE
+            Optimize.MAXIMUM,   // Novelty
+            Optimize.MINIMUM    // Diversity
+    );
 
 	public static void main (String [] args) {
 		CommandLineParser parser = new DefaultParser();
@@ -241,7 +256,7 @@ public class GeneticProgramingOptimization {
 				)), Genotype::gene
 		);
 
-		final Engine<ProgramGene<Double>, Double> engine = Engine
+		final Engine<ProgramGene<Double>, Vec<double[]>> engine = Engine
 				.builder(GeneticProgramingOptimization::fitness, codec)
 				.minimizing()
 				.offspringSelector(new TournamentSelector<>())
@@ -249,13 +264,13 @@ public class GeneticProgramingOptimization {
 						new SingleNodeCrossover<>(PBX),
 						new Mutator<>(PBMUT),
                         new MathRewriteAlterer<>(trs,1))
-				.survivorsSelector(new EliteSelector<ProgramGene<Double>, Double>(2, new MonteCarloSelector<>()))
+				.survivorsSelector(NSGA2Selector.ofVec())
 				.populationSize(POP_SIZE)
                 .executor((Executor)Runnable::run)
 				.build();
 
 		// Output file with unique filename
-		SimpleDateFormat df = new SimpleDateFormat("ddMMyy-hhmmss.SSS");
+		SimpleDateFormat df = new SimpleDateFormat("yyMMddhhmmssSSS");
 		try {
 			Date d = new Date();
 			File outputFile = new File(df.format(d) + ".csv");
@@ -264,20 +279,14 @@ public class GeneticProgramingOptimization {
 			e.printStackTrace();
 		}
 
-		final EvolutionResult<ProgramGene<Double>, Double> population = engine.stream()
-				.limit(GENS)
-				.peek(GeneticProgramingOptimization::update)
-				.peek(GeneticProgramingOptimization::toFile)
-				.collect(EvolutionResult.toBestEvolutionResult());
-
-//		try {
-//			if (popOutput.canWrite())
-//				IO.object.write(population.getPopulation(), popOutput);
-//			output.flush();
-//			output.close();
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
+		final EvolutionResult<ProgramGene<Double>, Vec<double[]>> population =
+                RandomRegistry.with(new Random(SEED), r ->
+                    engine.stream()
+                    .limit(GENS)
+                    .peek(GeneticProgramingOptimization::update)
+                    .peek(GeneticProgramingOptimization::toFile)
+                    .collect(MOEA.toParetoSet(IntRange.of(POP_SIZE/4, POP_SIZE/2)))
+                );
 
 		output.close();
 
@@ -288,24 +297,35 @@ public class GeneticProgramingOptimization {
                 .gene()
                 .toParenthesesString()
                 .replace("(", " ")
-                .replace(")", " "));
+                .replace(")", " ")
+                .replace(",", " "));
 	}
 
-	private static double fitness(final ProgramGene<Double> program) {
+	private static Vec<double[]> fitness(final ProgramGene<Double> program) {
 		String func = program.toParenthesesString()
 				.replace("("," ")
 				.replace(")"," ")
 				.replace(",", " ");
 
-		Recommender emf = new EMF(func, model, NUM_TOPICS, NUM_ITERS, REGULARIZATION, LEARNING_RATE, SEED,false);
+		Recommender emf = new EMF(func, model, NUM_TOPICS, NUM_ITERS, REGULARIZATION,
+                LEARNING_RATE, SEED,false);
 		emf.fit();
 		QualityMeasure mae = new MAE(emf);
-		double error = mae.getScore(1);
+		QualityMeasure novelty = new Novelty(emf, NUM_RECS);
+		QualityMeasure diversity = new Diversity(emf, NUM_RECS);
+		double error = mae.getScore();
+		double nov = novelty.getScore();
+		double div = novelty.getScore();
 
-		return (Double.isNaN(error) || Double.isInfinite(error)) ? 10.0 : error;
+		return fitfactory.newVec(new double[]{
+		            (Double.isNaN(error) || Double.isInfinite(error)) ? 10.0 : error,
+                    (Double.isNaN(nov) || Double.isInfinite(nov)) ? 10.0 : nov,
+                    (Double.isNaN(div) || Double.isInfinite(div)) ? 10.0 : div,
+                }
+        );
 	}
 
-	private static void update(final EvolutionResult<ProgramGene<Double>, Double> result) {
+	private static void update(final EvolutionResult<ProgramGene<Double>, Vec<double[]>> result) {
 		String info = String.format(
 				"%d/%d:\tbest=%.4f\tinvalids=%d\tavg=%.4f\tbest=%s",
                 result.generation(),
@@ -317,15 +337,11 @@ public class GeneticProgramingOptimization {
 		System.out.println(info);
 	}
 
-	private static void toFile(final EvolutionResult<ProgramGene<Double>, Double> result) {
-		double[] fitnesses = result.population().stream().mapToDouble(Phenotype::fitness).toArray();
-		List<CharSequence> fs = new ArrayList<>();
-
-		for (double fitness : fitnesses) {
-			fs.add(String.valueOf(fitness));
-		}
-
-		output.println(result.generation() + "," + String.join(",", fs));
-
+	private static void toFile(final EvolutionResult<ProgramGene<Double>, Vec<double[]>> result) {
+		result.population().stream().forEach(individual ->
+                output.println(result.generation() + ";" +
+                        String.join(";", (CharSequence) individual.fitness()) + ";" +
+                        individual.genotype().gene().toParenthesesString())
+                );
 	}
 }
