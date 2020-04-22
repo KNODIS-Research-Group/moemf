@@ -12,6 +12,7 @@ import io.jenetics.*;
 import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
+import io.jenetics.engine.Limits;
 import io.jenetics.ext.SingleNodeCrossover;
 import io.jenetics.ext.moea.MOEA;
 import io.jenetics.ext.moea.NSGA2Selector;
@@ -34,18 +35,20 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Random;
-import java.util.concurrent.Executor;
-import java.util.stream.Collectors;
 
+@SuppressWarnings({"unchecked"})
 public class GeneticProgramingOptimization {
 
 	private static final String BINARY_FILE = "datasets/ml100k.dat";
 	private static final long SEED = 1337;
     private static final int NUM_RECS = 10;
+	private static final IntRange NUM_RESULTS = IntRange.of(10,20);
 
-    private static int NUM_TOPICS = 6;
+	private static int NUM_TOPICS = 6;
 	private static double REGULARIZATION = 0.055;
 	private static double LEARNING_RATE = 0.0001;
 	private static int GENS = 150;
@@ -266,39 +269,43 @@ public class GeneticProgramingOptimization {
                         new MathRewriteAlterer<>(trs,1))
 				.survivorsSelector(NSGA2Selector.ofVec())
 				.populationSize(POP_SIZE)
-                .executor((Executor)Runnable::run)
+                .executor(Runnable::run)
 				.build();
 
 		// Output file with unique filename
-		SimpleDateFormat df = new SimpleDateFormat("yyMMddhhmmssSSS");
+		SimpleDateFormat df = new SimpleDateFormat("yyyyMMddhhmmssSSS");
 		try {
 			Date d = new Date();
 			File outputFile = new File(df.format(d) + ".csv");
 			output = new PrintWriter(outputFile);
+			output.println("Generation;MAE;Novelty;Diversity;Best");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
-		final EvolutionResult<ProgramGene<Double>, Vec<double[]>> population =
+		final ISeq<Phenotype<ProgramGene<Double>,Vec<double[]>>> bestFromPareto =
                 RandomRegistry.with(new Random(SEED), r ->
                     engine.stream()
-                    .limit(GENS)
+                    .limit(Limits.byFixedGeneration(GENS))
                     .peek(GeneticProgramingOptimization::update)
                     .peek(GeneticProgramingOptimization::toFile)
-                    .collect(MOEA.toParetoSet(IntRange.of(POP_SIZE/4, POP_SIZE/2)))
+					.collect(MOEA.toParetoSet(NUM_RESULTS))
                 );
 
 		output.close();
 
-		System.out.println(
-		        population
-                .bestPhenotype()
-                .genotype()
-                .gene()
-                .toParenthesesString()
-                .replace("(", " ")
-                .replace(")", " ")
-                .replace(",", " "));
+		System.out.println("\n------------ Best " + NUM_RESULTS + " individuals from Pareto Set ------------");
+
+		bestFromPareto.stream().forEach(individual -> System.out.println(
+					individual
+					.genotype()
+					.gene()
+					.toParenthesesString()
+					.replace("(", " ")
+					.replace(")", " ")
+					.replace(",", " ")
+				)
+			);
 	}
 
 	private static Vec<double[]> fitness(final ProgramGene<Double> program) {
@@ -315,32 +322,38 @@ public class GeneticProgramingOptimization {
 		QualityMeasure diversity = new Diversity(emf, NUM_RECS);
 		double error = mae.getScore();
 		double nov = novelty.getScore();
-		double div = novelty.getScore();
+		double div = diversity.getScore();
 
 		return fitfactory.newVec(new double[]{
 		            (Double.isNaN(error) || Double.isInfinite(error)) ? 10.0 : error,
-                    (Double.isNaN(nov) || Double.isInfinite(nov)) ? 10.0 : nov,
-                    (Double.isNaN(div) || Double.isInfinite(div)) ? 10.0 : div,
+                    (Double.isNaN(nov) || Double.isInfinite(nov)) ? 0.0 : nov,
+                    (Double.isNaN(div) || Double.isInfinite(div)) ? 0.0 : div,
                 }
         );
 	}
 
 	private static void update(final EvolutionResult<ProgramGene<Double>, Vec<double[]>> result) {
+		List<EvolutionResult<ProgramGene<Double>, Vec<double[]>>> l = new ArrayList<>();
+		l.add(result);
+		ISeq<Phenotype<ProgramGene<Double>, Vec<double[]>>> paretoSet = l.stream().collect(MOEA.toParetoSet(NUM_RESULTS));
+
 		String info = String.format(
-				"%d/%d:\tbest=%.4f\tinvalids=%d\tavg=%.4f\tbest=%s",
+				"%d/%d:\tN-pareto=%4d\tHypervolume=%6.4f | %6.4f\tinvalids=%3d",
                 result.generation(),
 				GENS,
-                result.bestFitness(),
-                result.invalidCount(),
-				result.population().stream().collect(Collectors.averagingDouble(Phenotype::fitness)),
-				result.bestPhenotype().genotype().gene().toParenthesesString());
+                paretoSet.length(),
+//				MultiobjectiveStatistics.hypervolume(paretoSet, Vec.of(20.0, 0.0, 1.0)),
+				result.bestFitness().data()[2],
+                result.invalidCount());
 		System.out.println(info);
 	}
 
 	private static void toFile(final EvolutionResult<ProgramGene<Double>, Vec<double[]>> result) {
 		result.population().stream().forEach(individual ->
                 output.println(result.generation() + ";" +
-                        String.join(";", (CharSequence) individual.fitness()) + ";" +
+                        individual.fitness().data()[0] + ";" +
+						individual.fitness().data()[1] + ";" +
+						individual.fitness().data()[2] + ";" +
                         individual.genotype().gene().toParenthesesString())
                 );
 	}

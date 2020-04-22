@@ -6,6 +6,8 @@ import com.github.ferortega.cf4j.data.RandomSplitDataSet;
 import com.github.ferortega.cf4j.qualityMeasure.QualityMeasure;
 import com.github.ferortega.cf4j.qualityMeasure.prediction.MAE;
 import com.github.ferortega.cf4j.qualityMeasure.prediction.MSE;
+import com.github.ferortega.cf4j.qualityMeasure.recommendation.Diversity;
+import com.github.ferortega.cf4j.qualityMeasure.recommendation.Novelty;
 import com.github.ferortega.cf4j.recommender.Recommender;
 import com.github.ferortega.cf4j.recommender.matrixFactorization.BNMF;
 import com.github.ferortega.cf4j.recommender.matrixFactorization.BiasedMF;
@@ -41,7 +43,7 @@ public class BaselinesComparison {
     private static double EMF_REGULARIZARION = 0.095;
 
     private static String [] EMF_FUNCS = {
-/*            "* - cos cos log exp atan pu4 - atan -- qi3 exp -- atan log exp pu1 exp cos log cos log exp - exp cos pu2 exp -- atan log atan sin cos cos atan atan exp - log exp atan cos log exp atan pu4 pu2",
+            "* - cos cos log exp atan pu4 - atan -- qi3 exp -- atan log exp pu1 exp cos log cos log exp - exp cos pu2 exp -- atan log atan sin cos cos atan atan exp - log exp atan cos log exp atan pu4 pu2",
             "- + + exp sin qi3 exp + atan pu2 cos One pu1 * + pu1 sin + pu1 sin + + pu1 + + exp qi5 exp + * pu1 pu0 sin + + pu1 * + * * One One pu0 pu1 qi2 One + pu1 * + * * One One qi4 pu1 qi2 One qi2",
             "- - inv inv + inv inv + sin One cos Zero - inv inv + inv inv + sin atan -- + + * qi0 pu4 pu0 * qi0 pu4 cos Zero cos Zero + * inv inv qi3 pu4 -- sin atan + + qi0 pu0 * qi0 qi0 + * inv inv qi3 pu4 -- sin atan + + qi0 pu0 * cos Zero pu4 atan -- + + qi0 pu0 * inv + inv inv + sin One cos Zero cos Zero pu4",
             "-- + - - qi0 + + + One One * pu3 qi0 One + One pu2 * pu0 qi0",
@@ -50,8 +52,8 @@ public class BaselinesComparison {
             "* - -- -- cos -- -- pu1 atan inv -- qi3 exp cos * atan -- exp atan pu1 -- qi4",
             "- + - qi4 pu2 inv * cos sin - qi4 pu2 atan exp qi2 - cos - qi4 pu4 cos cos * - - pu2 * qi4 One pu2 -- atan pu0",
             "+ exp qi0 - exp atan pu0 + - Zero - exp qi0 qi5 + * pu5 qi5 - pu4 qi2",
-            "exp atan pow pow * exp exp pu5 inv exp qi0 exp pu4 exp inv exp pu5",*/
-            "exp inv cos cos -- log atan cos cos -- cos inv cos cos atan atan cos -- inv cos -- sin log atan cos atan -- cos -- sin log atan cos inv cos atan atan cos -- sin log atan cos inv -- sin log atan cos inv cos cos atan inv cos cos -- -- -- cos inv cos cos atan cos cos atan inv cos cos -- -- -- cos inv cos cos atan cos cos cos -- sin log atan cos inv cos cos atan atan cos -- sin log atan cos log cos inv cos cos atan atan atan cos -- sin log inv atan -- sin inv cos inv qi0"
+            "exp atan pow pow * exp exp pu5 inv exp qi0 exp pu4 exp inv exp pu5"
+//            "exp inv cos cos -- log atan cos cos -- cos inv cos cos atan atan cos -- inv cos -- sin log atan cos atan -- cos -- sin log atan cos inv cos atan atan cos -- sin log atan cos inv -- sin log atan cos inv cos cos atan inv cos cos -- -- -- cos inv cos cos atan cos cos atan inv cos cos -- -- -- cos inv cos cos atan cos cos cos -- sin log atan cos inv cos cos atan atan cos -- sin log atan cos log cos inv cos cos atan atan atan cos -- sin log inv atan -- sin inv cos inv qi0"
     };
 
 //    private static final String BINARY_FILE = "datasets/filmtrust.cf4j";
@@ -106,6 +108,8 @@ public class BaselinesComparison {
 
         double [] mae_vector = new double [series.length];
         double [] mse_vector = new double [series.length];
+        double [] novelty_vector = new double [series.length];
+        double [] diversity_vector = new double [series.length];
 
         // load dataset
 
@@ -154,17 +158,21 @@ public class BaselinesComparison {
 
             fm.fit();
             QualityMeasure mae = new MAE(fm);
-            QualityMeasure mse = new MSE(fm);
+//            QualityMeasure mse = new MSE(fm);
+            QualityMeasure novelty = new Novelty(fm, 10);
+            QualityMeasure diversity = new Diversity(fm, 10);
 
             mae_vector[s] = mae.getScore();
-            mse_vector[s] = mse.getScore();
+//            mse_vector[s] = mse.getScore();
+            novelty_vector[s] = novelty.getScore();
+            diversity_vector[s] = diversity.getScore();
 
 
             // print results
 
-            System.out.println("\nMethod;MAE;MSE");
+            System.out.println("\nMethod;MAE;Novelty;Diversity");
             for (int i = 0; i < series.length; i++) {
-                System.out.println(series[i] + ";" + mae_vector[i] + ";" + mse_vector[i]);
+                System.out.println(series[i] + ";" + mae_vector[i] + ";" + novelty_vector[i] + ";" + diversity_vector[i]);
             }
         }
     }
