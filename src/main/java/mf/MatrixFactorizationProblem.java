@@ -81,7 +81,7 @@ public class MatrixFactorizationProblem extends AbstractProblem {
         solution.setObjectives(new double[]{error, -nov, div});
     }
 
-    private String translate(String s) {
+    public static String translate(String s) {
         return s.replace("("," ")
                 .replace(")"," ")
                 .replace(",", " ")

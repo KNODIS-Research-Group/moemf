@@ -3,17 +3,17 @@ package experiments;
 import com.github.ferortega.cf4j.data.DataModel;
 import com.github.ferortega.cf4j.data.DataSet;
 import com.github.ferortega.cf4j.data.RandomSplitDataSet;
+import mf.AlgorithmProgress;
 import mf.MatrixFactorizationProblem;
 import org.moeaframework.Executor;
-import org.moeaframework.Instrumenter;
-import org.moeaframework.analysis.collector.Accumulator;
 import org.moeaframework.core.NondominatedPopulation;
 import org.moeaframework.core.PRNG;
 import org.moeaframework.core.Solution;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class OneShot {
     public static void main(String[] args) throws IOException {
@@ -55,15 +55,19 @@ public class OneShot {
 //                .checkpointEveryIteration()
 //                .withCheckpointFile(new File("ml100k_6_5e-2_1e-4_10.chkp"))
 //                .withInstrumenter(instrumenter)
+                .withProgressListener(new AlgorithmProgress())
                 .distributeOnAllCores()
                 .run();
 
 //        Accumulator acc = instrumenter.getLastAccumulator();
 //        acc.saveCSV(new File("ml100k_6_5e-2_1e-4_10.csv"));
 
-        FileWriter fileWriter = new FileWriter("pf_ml100k_6_5e-2_1e-4_10");
+        // Output file with unique filename
+        SimpleDateFormat df = new SimpleDateFormat("yyyyMMddhhmmssSSS");
+        Date d = new Date();
+        FileWriter fileWriter = new FileWriter(df.format(d) + "_pf_ml100k_6_5e-2_1e-4_10");
         for (Solution solution : results) {
-            fileWriter.write(solution.getVariable(0) + "," + solution.getObjective(0) + "," + solution.getObjective(1) + "," + solution.getObjective(2)+"\n");
+            fileWriter.write(MatrixFactorizationProblem.translate(solution.getVariable(0).toString()) + "," + solution.getObjective(0) + "," + solution.getObjective(1) + "," + solution.getObjective(2)+"\n");
         }
         fileWriter.close();
     }
