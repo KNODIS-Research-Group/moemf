@@ -1,11 +1,11 @@
 package mf;
 
-import com.github.ferortega.cf4j.data.DataModel;
-import com.github.ferortega.cf4j.qualityMeasure.QualityMeasure;
-import com.github.ferortega.cf4j.qualityMeasure.prediction.MAE;
-import com.github.ferortega.cf4j.qualityMeasure.recommendation.Diversity;
-import com.github.ferortega.cf4j.qualityMeasure.recommendation.Novelty;
-import com.github.ferortega.cf4j.recommender.Recommender;
+import es.upm.etsisi.cf4j.data.DataModel;
+import es.upm.etsisi.cf4j.qualityMeasure.QualityMeasure;
+import es.upm.etsisi.cf4j.qualityMeasure.prediction.MAE;
+import es.upm.etsisi.cf4j.qualityMeasure.recommendation.Diversity;
+import es.upm.etsisi.cf4j.qualityMeasure.recommendation.Novelty;
+import es.upm.etsisi.cf4j.recommender.Recommender;
 import mf.opers.Inverse;
 import mf.opers.Negate;
 import org.moeaframework.core.PRNG;

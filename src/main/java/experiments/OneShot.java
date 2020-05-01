@@ -1,8 +1,8 @@
 package experiments;
 
-import com.github.ferortega.cf4j.data.DataModel;
-import com.github.ferortega.cf4j.data.DataSet;
-import com.github.ferortega.cf4j.data.RandomSplitDataSet;
+import es.upm.etsisi.cf4j.data.DataModel;
+import es.upm.etsisi.cf4j.data.DataSet;
+import es.upm.etsisi.cf4j.data.RandomSplitDataSet;
 import mf.AlgorithmProgress;
 import mf.MatrixFactorizationProblem;
 import org.moeaframework.Executor;
