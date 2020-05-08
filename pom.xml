@@ -103,4 +103,16 @@
             <version>2.13</version>
         </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>snapshots-org.sonatype.oss</id>
+            <url>
+                https://oss.sonatype.org/content/repositories/snapshots
+            </url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 </project>
