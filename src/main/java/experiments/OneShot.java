@@ -1,32 +1,24 @@
 package experiments;
 
-import es.upm.etsisi.cf4j.data.DataModel;
-import es.upm.etsisi.cf4j.data.DataSet;
-import es.upm.etsisi.cf4j.data.RandomSplitDataSet;
-import mf.AlgorithmProgress;
-import mf.MatrixFactorizationProblem;
-import org.moeaframework.Executor;
-import org.moeaframework.core.NondominatedPopulation;
-import org.moeaframework.core.PRNG;
-import org.moeaframework.core.Solution;
-
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import org.moeaframework.Executor;
+import org.moeaframework.core.NondominatedPopulation;
+import org.moeaframework.core.PRNG;
+import org.moeaframework.core.Solution;
+
+import es.upm.etsisi.cf4j.data.BenchmarkDataModels;
+import es.upm.etsisi.cf4j.data.DataModel;
+import mf.AlgorithmProgress;
+import mf.MatrixFactorizationProblem;
+
 public class OneShot {
     public static void main(String[] args) throws IOException {
         // Datamodel
-        DataSet ml100k = null;
-        try {
-            ml100k = new RandomSplitDataSet("datasets/ml100k.dat", 0.2f, 0.2f, "::");
-        } catch (IOException e) {
-            System.out.println("There was an error when loading file " + "datasets/ml100k.dat");
-            e.printStackTrace();
-            System.exit(-1);
-        }
-        DataModel model = new DataModel(ml100k);
+        DataModel model = BenchmarkDataModels.MovieLens100K();
 
 //        MatrixFactorizationProblem(DataModel model, int numFactors, int iters, double regularization, double learningRate, int nRecommendations)
 
