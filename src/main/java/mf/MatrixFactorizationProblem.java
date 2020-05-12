@@ -69,7 +69,7 @@ public class MatrixFactorizationProblem extends AbstractProblem {
         String func = translate(solution.getVariable(0).toString());
 
         Recommender emf = new EMF(func, _model, _numFactors, _iters, _regularization,
-                _learningRate, PRNG.nextInt(),false);
+                _learningRate, 4815162342L,false);
         emf.fit();
         QualityMeasure mae = new MAE(emf);
         QualityMeasure novelty = new Novelty(emf, _nRecommendations);
