@@ -17,12 +17,12 @@ public class EMF extends Recommender {
 
     private SymFunction sf;
 
-    private double [][] p;
-    private double [][] q;
+    public double [][] p;
+    public double [][] q;
 
     private boolean verbose;
 
-    public EMF(String func, DataModel dataModel, int numFactors, int numIters, double regularization, double learningRate, long seed, boolean verbose) {
+    public EMF(DataModel dataModel, String func, int numFactors, int numIters, double regularization, double learningRate, long seed, boolean verbose) {
         super(dataModel);
 
         Random rand = new Random(seed);
@@ -119,6 +119,10 @@ public class EMF extends Recommender {
                 if ((iter % 10) == 0) System.out.print(".");
                 if ((iter % 100) == 0) System.out.println(iter + " iterations");
             }
+
+            if (!this.isValid()) {
+                break;
+            }
         }
     }
 
@@ -135,5 +139,25 @@ public class EMF extends Recommender {
             map.put("qi" + k, qi[k]);
         }
         return map;
+    }
+
+    private boolean isValid() {
+        for (int u = 0; u < this.p.length; u++) {
+            for (int k = 0; k < this.numFactors; k++) {
+                if (Double.isNaN(this.p[u][k])) {
+                    return false;
+                }
+            }
+        }
+
+        for (int i = 0; i < this.q.length; i++) {
+            for (int k = 0; k < this.numFactors; k++) {
+                if (Double.isNaN(this.q[i][k])) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 }

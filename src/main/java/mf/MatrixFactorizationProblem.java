@@ -8,7 +8,6 @@ import es.upm.etsisi.cf4j.qualityMeasure.recommendation.Novelty;
 import es.upm.etsisi.cf4j.recommender.Recommender;
 import mf.opers.Inverse;
 import mf.opers.Negate;
-import org.moeaframework.core.PRNG;
 import org.moeaframework.core.Solution;
 import org.moeaframework.core.variable.Program;
 import org.moeaframework.problem.AbstractProblem;
@@ -68,7 +67,7 @@ public class MatrixFactorizationProblem extends AbstractProblem {
     public void evaluate(Solution solution) {
         String func = translate(solution.getVariable(0).toString());
 
-        Recommender emf = new EMF(func, _model, _numFactors, _iters, _regularization,
+        Recommender emf = new EMF(_model, func, _numFactors, _iters, _regularization,
                 _learningRate, 4815162342L,false);
         emf.fit();
         QualityMeasure mae = new MAE(emf);

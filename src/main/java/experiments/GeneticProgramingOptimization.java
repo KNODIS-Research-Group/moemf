@@ -314,7 +314,7 @@ public class GeneticProgramingOptimization {
 				.replace(")"," ")
 				.replace(",", " ");
 
-		Recommender emf = new EMF(func, model, NUM_TOPICS, NUM_ITERS, REGULARIZATION,
+		Recommender emf = new EMF(model, func, NUM_TOPICS, NUM_ITERS, REGULARIZATION,
                 LEARNING_RATE, SEED,false);
 		emf.fit();
 		QualityMeasure mae = new MAE(emf);
