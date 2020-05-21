@@ -70,14 +70,19 @@ public class MatrixFactorizationProblem extends AbstractProblem {
         Recommender emf = new EMF(_model, func, _numFactors, _iters, _regularization,
                 _learningRate, 4815162342L,false);
         emf.fit();
-        QualityMeasure mae = new MAE(emf);
-        QualityMeasure novelty = new Novelty(emf, _nRecommendations);
-        QualityMeasure diversity = new Diversity(emf, _nRecommendations);
-        double error = mae.getScore();
-        double nov = novelty.getScore();
-        double div = diversity.getScore();
 
-        solution.setObjectives(new double[]{error, -nov, div});
+        if (((EMF) emf).isValid()) {
+            QualityMeasure mae = new MAE(emf);
+            QualityMeasure novelty = new Novelty(emf, _nRecommendations);
+            QualityMeasure diversity = new Diversity(emf, _nRecommendations);
+            double error = mae.getScore();
+            double nov = novelty.getScore();
+            double div = diversity.getScore();
+
+            solution.setObjectives(new double[]{error, -nov, div});
+        } else {
+            solution.setObjectives(new double[]{Double.MAX_VALUE, 0.0, Double.MAX_VALUE});
+        }
     }
 
     public static String translate(String s) {

@@ -4,6 +4,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Random;
 
 import org.moeaframework.Executor;
 import org.moeaframework.core.NondominatedPopulation;
@@ -34,7 +35,10 @@ public class OneShot {
 //                .attachElapsedTimeCollector()
 //                .attachPopulationSizeCollector();
 
-        PRNG.setSeed(19841024);
+        Random rand = new Random();
+        int posRandInt = rand.nextInt(Integer.MAX_VALUE);
+        PRNG.setSeed(posRandInt);
+        System.out.println("Seed: " + posRandInt);
 
         NondominatedPopulation results = new Executor()
                 .withAlgorithm("NSGAII")
@@ -57,10 +61,11 @@ public class OneShot {
         // Output file with unique filename
         SimpleDateFormat df = new SimpleDateFormat("yyyyMMddhhmmssSSS");
         Date d = new Date();
-        FileWriter fileWriter = new FileWriter(df.format(d) + "_pf_ml100k_6_5e-2_1e-4_10");
+        FileWriter fileWriter = new FileWriter(df.format(d) + "_pf_ml100k_6_5e-2_1e-4_10_" + posRandInt);
         for (Solution solution : results) {
             fileWriter.write(MatrixFactorizationProblem.translate(solution.getVariable(0).toString()) + "," + solution.getObjective(0) + "," + solution.getObjective(1) + "," + solution.getObjective(2)+"\n");
         }
         fileWriter.close();
+        System.out.println("Seed: " + posRandInt);
     }
 }
