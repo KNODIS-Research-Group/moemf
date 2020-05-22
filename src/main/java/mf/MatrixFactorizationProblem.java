@@ -28,7 +28,7 @@ public class MatrixFactorizationProblem extends AbstractProblem {
                                       double regularization,
                                       double learningRate,
                                       int nRecommendations) {
-        super(1, 3);
+        super(1, 3, 1);
 
         _model = model;
         _numFactors = numFactors;
@@ -70,14 +70,21 @@ public class MatrixFactorizationProblem extends AbstractProblem {
         Recommender emf = new EMF(_model, func, _numFactors, _iters, _regularization,
                 _learningRate, 4815162342L,false);
         emf.fit();
-        QualityMeasure mae = new MAE(emf);
-        QualityMeasure novelty = new Novelty(emf, _nRecommendations);
-        QualityMeasure diversity = new Diversity(emf, _nRecommendations);
-        double error = mae.getScore();
-        double nov = novelty.getScore();
-        double div = diversity.getScore();
 
-        solution.setObjectives(new double[]{error, -nov, div});
+        if (((EMF) emf).isValid()) {
+            QualityMeasure mae = new MAE(emf);
+            QualityMeasure novelty = new Novelty(emf, _nRecommendations);
+            QualityMeasure diversity = new Diversity(emf, _nRecommendations);
+            double error = mae.getScore();
+            double nov = novelty.getScore();
+            double div = diversity.getScore();
+
+            solution.setObjectives(new double[]{error, -nov, div});
+            solution.setConstraints(new double[] {0});
+        } else {
+            solution.setObjectives(new double[]{Double.MAX_VALUE, 0.0, Double.MAX_VALUE});
+            solution.setConstraints(new double[] {0});
+        }
     }
 
     public static String translate(String s) {
@@ -98,7 +105,7 @@ public class MatrixFactorizationProblem extends AbstractProblem {
 
     @Override
     public Solution newSolution() {
-        Solution solution = new Solution(this.numberOfVariables, this.numberOfObjectives);
+        Solution solution = new Solution(this.numberOfVariables, this.numberOfObjectives, this.numberOfConstraints);
         solution.setVariable(0, new Program(rules));
         return solution;
     }

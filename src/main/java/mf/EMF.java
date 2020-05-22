@@ -141,7 +141,7 @@ public class EMF extends Recommender {
         return map;
     }
 
-    private boolean isValid() {
+    public boolean isValid() {
         for (int u = 0; u < this.p.length; u++) {
             for (int k = 0; k < this.numFactors; k++) {
                 if (Double.isNaN(this.p[u][k])) {
