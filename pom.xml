@@ -102,6 +102,11 @@
             <artifactId>moeaframework</artifactId>
             <version>2.13</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-csv</artifactId>
+            <version>1.4</version>
+        </dependency>
     </dependencies>
 
     <repositories>
