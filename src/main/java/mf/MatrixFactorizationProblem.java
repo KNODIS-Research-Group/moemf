@@ -28,7 +28,7 @@ public class MatrixFactorizationProblem extends AbstractProblem {
                                       double regularization,
                                       double learningRate,
                                       int nRecommendations) {
-        super(1, 3);
+        super(1, 3, 1);
 
         _model = model;
         _numFactors = numFactors;
@@ -80,8 +80,10 @@ public class MatrixFactorizationProblem extends AbstractProblem {
             double div = diversity.getScore();
 
             solution.setObjectives(new double[]{error, -nov, div});
+            solution.setConstraints(new double[] {0});
         } else {
             solution.setObjectives(new double[]{Double.MAX_VALUE, 0.0, Double.MAX_VALUE});
+            solution.setConstraints(new double[] {0});
         }
     }
 
@@ -103,7 +105,7 @@ public class MatrixFactorizationProblem extends AbstractProblem {
 
     @Override
     public Solution newSolution() {
-        Solution solution = new Solution(this.numberOfVariables, this.numberOfObjectives);
+        Solution solution = new Solution(this.numberOfVariables, this.numberOfObjectives, this.numberOfConstraints);
         solution.setVariable(0, new Program(rules));
         return solution;
     }

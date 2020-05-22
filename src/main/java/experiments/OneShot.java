@@ -59,7 +59,7 @@ public class OneShot {
 //        acc.saveCSV(new File("ml100k_6_5e-2_1e-4_10.csv"));
 
         // Output file with unique filename
-        SimpleDateFormat df = new SimpleDateFormat("yyyyMMddhhmmssSSS");
+        SimpleDateFormat df = new SimpleDateFormat("yyyyMMddHHmmssSSS");
         Date d = new Date();
         FileWriter fileWriter = new FileWriter(df.format(d) + "_pf_ml100k_6_5e-2_1e-4_10_" + posRandInt);
         for (Solution solution : results) {
