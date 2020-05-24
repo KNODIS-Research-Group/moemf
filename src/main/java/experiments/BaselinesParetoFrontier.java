@@ -46,6 +46,7 @@ public class BaselinesParetoFrontier {
             System.out.println("Evaluating " + params.toString());
 
             Recommender recommender = new PMF(datamodel, params);
+            recommender.fit();
 
             QualityMeasure mae = new MAE(recommender);
             double err = mae.getScore();
